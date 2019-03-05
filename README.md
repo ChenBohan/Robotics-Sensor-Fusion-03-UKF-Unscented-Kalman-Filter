@@ -3,9 +3,6 @@ Udacity Self-Driving Car Engineer Nanodegree: Unscented Kalman Filter
 
 ### UKF
 
-Advantages:
-- use sigma points to approximate the non-linear transition is **better** than linearization.
-- Don't need to calculate **Jacobin matrix**
 
 ### Constant turn rate and velocity magnitude model (CTRV)
 
