@@ -1,7 +1,13 @@
 # Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter
 Udacity Self-Driving Car Engineer Nanodegree: Unscented Kalman Filter
 
-## Generating Sigma Points
+### UKF
+
+Advantages:
+- use sigma points to approximate the non-linear transition is **better** than linearization.
+- Don't need to calculate **Jacobin matrix**
+
+### Generating Sigma Points
 ```cpp
   // create sigma point matrix
   MatrixXd Xsig = MatrixXd(n_x, 2 * n_x + 1);
