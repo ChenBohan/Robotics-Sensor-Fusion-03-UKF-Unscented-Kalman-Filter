@@ -1,10 +1,10 @@
 # Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter
 Udacity Self-Driving Car Engineer Nanodegree: Unscented Kalman Filter
 
-### UKF
+## UKF
 
 
-### Constant turn rate and velocity magnitude model (CTRV)
+### onstant turn rate and velocity magnitude model (CTRV)
 
 
 <img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/model_overview.png" width = "70%" height = "70%" div align=center />
@@ -29,8 +29,6 @@ Udacity Self-Driving Car Engineer Nanodegree: Unscented Kalman Filter
 <img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/CTRV%20Model.png" width = "70%" height = "70%" div align=center />
 
 
-### UKF
-
 #### Linear process
 
 <img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/if_linear.png" width = "70%" height = "70%" div align=center />
@@ -49,8 +47,9 @@ Udacity Self-Driving Car Engineer Nanodegree: Unscented Kalman Filter
 
 <img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/roadmap.png" width = "70%" height = "70%" div align=center />
 
+## Prediction
 
-#### 1.Generating Sigma Points
+### 1.Generating Sigma Points
 
 The sigma points are chosen around the mean state and in a certain relation to the standard deviation signal
 of every state dimension.
@@ -182,4 +181,138 @@ Note: `P.llt().matrixL()`produces the lower triangular matrix L of the matrix P 
     Xsig_pred(2,i) = v_p;
     Xsig_pred(3,i) = yaw_p;
     Xsig_pred(4,i) = yawd_p;
+```
+
+### 4.Predicted Mean and Covariance
+
+pic2
+
+```cpp
+  // set weights
+  double weight_0 = lambda/(lambda+n_aug);
+  weights(0) = weight_0;
+  for (int i=1; i<2*n_aug+1; ++i) {  // 2n+1 weights
+    double weight = 0.5/(n_aug+lambda);
+    weights(i) = weight;
+  }
+
+  // predicted state mean
+  x.fill(0.0);
+  for (int i = 0; i < 2 * n_aug + 1; ++i) {  // iterate over sigma points
+    x = x + weights(i) * Xsig_pred.col(i);
+  }
+
+  // predicted state covariance matrix
+  P.fill(0.0);
+  for (int i = 0; i < 2 * n_aug + 1; ++i) {  // iterate over sigma points
+    // state difference
+    VectorXd x_diff = Xsig_pred.col(i) - x;
+    // angle normalization
+    while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
+    while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
+
+    P = P + weights(i) * x_diff * x_diff.transpose() ;
+  }
+```
+
+## Update
+
+### 5.Measurement Prediction (Radar)
+
+Now we have to transform the **predicted state** into the **measurement space**.
+
+The function that defines this transformation is the **measurement model**.
+
+Of course, now we have to consider what kind of **sensor** produced the current measurement and use the corresponding measurement model.
+
+pic1
+
+A popular **shortcut** is to just **reuse the signal points** we already have from the prediction step.
+- We can skip generating sigma points.
+- We can also skip the augmentation step.
+  - We needed the augmentation because the process noise had a non linear effect on the state.
+  - Here the Radar measurement model was a non linear fraction, but the measurement noise had a purely additive effect.
+
+```cpp
+  // transform sigma points into measurement space
+  for (int i = 0; i < 2 * n_aug + 1; ++i) {  // 2n+1 simga points
+    // extract values for better readability
+    double p_x = Xsig_pred(0,i);
+    double p_y = Xsig_pred(1,i);
+    double v  = Xsig_pred(2,i);
+    double yaw = Xsig_pred(3,i);
+
+    double v1 = cos(yaw)*v;
+    double v2 = sin(yaw)*v;
+
+    // measurement model
+    Zsig(0,i) = sqrt(p_x*p_x + p_y*p_y);                       // r
+    Zsig(1,i) = atan2(p_y,p_x);                                // phi
+    Zsig(2,i) = (p_x*v1 + p_y*v2) / sqrt(p_x*p_x + p_y*p_y);   // r_dot
+  }
+
+  // mean predicted measurement
+  z_pred.fill(0.0);
+  for (int i=0; i < 2*n_aug+1; ++i) {
+    z_pred = z_pred + weights(i) * Zsig.col(i);
+  }
+
+  // innovation covariance matrix S
+  S.fill(0.0);
+  for (int i = 0; i < 2 * n_aug + 1; ++i) {  // 2n+1 simga points
+    // residual
+    VectorXd z_diff = Zsig.col(i) - z_pred;
+
+    // angle normalization
+    while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+    while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+
+    S = S + weights(i) * z_diff * z_diff.transpose();
+  }
+
+  // add measurement noise covariance matrix
+  MatrixXd R = MatrixXd(n_z,n_z);
+  R <<  std_radr*std_radr, 0, 0,
+        0, std_radphi*std_radphi, 0,
+        0, 0,std_radrd*std_radrd;
+  S = S + R;
+```
+
+### 6.UKF Update
+
+This is actually the first time we really need to know the measurement values.
+
+```cpp
+  // calculate cross correlation matrix
+  Tc.fill(0.0);
+  for (int i = 0; i < 2 * n_aug + 1; ++i) {  // 2n+1 simga points
+    // residual
+    VectorXd z_diff = Zsig.col(i) - z_pred;
+    // angle normalization
+    while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+    while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+
+    // state difference
+    VectorXd x_diff = Xsig_pred.col(i) - x;
+    // angle normalization
+    while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
+    while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
+
+    Tc = Tc + weights(i) * x_diff * z_diff.transpose();
+  }
+
+  // Kalman gain K;
+  MatrixXd K = Tc * S.inverse();
+
+  // residual
+  VectorXd z_diff = z - z_pred;
+
+  // angle normalization
+  while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+  while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+
+  // update state mean and covariance matrix
+  x = x + K * z_diff;
+  P = P - K*S*K.transpose();
+
 ```
