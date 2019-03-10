@@ -185,7 +185,9 @@ Note: `P.llt().matrixL()`produces the lower triangular matrix L of the matrix P 
 
 ### 4.Predicted Mean and Covariance
 
-pic2
+<img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/Predicted%20Mean%20and%20Covariance1.png" width = "70%" height = "70%" div align=center />
+
+<img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/Predicted%20Mean%20and%20Covariance2.png" width = "70%" height = "70%" div align=center />
 
 ```cpp
   // set weights
@@ -225,13 +227,19 @@ The function that defines this transformation is the **measurement model**.
 
 Of course, now we have to consider what kind of **sensor** produced the current measurement and use the corresponding measurement model.
 
-pic1
+<img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/Measurement%20Prediction1.png" width = "70%" height = "70%" div align=center />
 
 A popular **shortcut** is to just **reuse the signal points** we already have from the prediction step.
 - We can skip generating sigma points.
 - We can also skip the augmentation step.
   - We needed the augmentation because the process noise had a non linear effect on the state.
   - Here the Radar measurement model was a non linear fraction, but the measurement noise had a purely additive effect.
+
+<img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/Measurement%20Prediction2.png" width = "70%" height = "70%" div align=center />
+
+<img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/Measurement%20Prediction3.png" width = "70%" height = "70%" div align=center />
+
+<img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/Predict%20Radar%20Measurement.png" width = "70%" height = "70%" div align=center />
 
 ```cpp
   // transform sigma points into measurement space
@@ -281,6 +289,11 @@ A popular **shortcut** is to just **reuse the signal points** we already have fr
 ### 6.UKF Update
 
 This is actually the first time we really need to know the measurement values.
+
+<img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/UKF%20Augmentation1.png" width = "70%" height = "70%" div align=center />
+
+<img src="https://github.com/ChenBohan/Robotics-Sensor-Fusion-03-UKF-Unscented-Kalman-Filter/blob/master/readme_img/UKF%20Augmentation2.png" width = "70%" height = "70%" div align=center />
+
 
 ```cpp
   // calculate cross correlation matrix
